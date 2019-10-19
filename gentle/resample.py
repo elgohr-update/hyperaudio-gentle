@@ -2,6 +2,7 @@ import os
 import subprocess
 import tempfile
 
+from urllib.parse import urlparse
 from contextlib import contextmanager
 
 
@@ -9,9 +10,10 @@ from .util.paths import get_binary
 
 FFMPEG = get_binary("ffmpeg")
 
+
 def resample(infile, outfile, offset=None, duration=None):
-    if not os.path.isfile(infile):
-        raise IOError("Not a file: %s" % infile)
+    if not os.path.isfile(infile) and not urlparse(infile).scheme in ('http', 'https',):
+        raise IOError("Not a file/URL: %s" % infile)
 
     '''
     Use FFMPEG to convert a media file to a wav file sampled at 8K
@@ -37,6 +39,7 @@ def resample(infile, outfile, offset=None, duration=None):
         outfile
     ]
     return subprocess.call(cmd)
+
 
 @contextmanager
 def resampled(infile, offset=None, duration=None):
