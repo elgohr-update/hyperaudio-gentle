@@ -76,9 +76,19 @@ class Transcriber():
         status['status'] = 'ENCODING'
 
         wavfile = os.path.join(outdir, 'a.wav')
-        if ((not isinstance(audio, str)) and gentle.resample(os.path.join(outdir, 'upload'), wavfile) != 0) or gentle.resample(audio, wavfile) != 0:
+        # if ((not isinstance(audio, str)) and gentle.resample(os.path.join(outdir, 'upload'), wavfile) != 0) or gentle.resample(audio, wavfile) != 0:
+        if (not isinstance(audio, str)) and gentle.resample(os.path.join(outdir, 'upload'), wavfile) != 0:
             status['status'] = 'ERROR'
             status['error'] = "Encoding failed. Make sure that you've uploaded a valid media file."
+            # Save the status so that errors are recovered on restart of the server
+            # XXX: This won't work, because the endpoint will override this file
+            with open(os.path.join(outdir, 'status.json'), 'w') as jsfile:
+                json.dump(status, jsfile, indent=2)
+            return
+
+        if isinstance(audio, str) and gentle.resample(audio, wavfile) != 0:
+            status['status'] = 'ERROR'
+            status['error'] = "Encoding failed. Make sure that you've referenced a valid media URL."
             # Save the status so that errors are recovered on restart of the server
             # XXX: This won't work, because the endpoint will override this file
             with open(os.path.join(outdir, 'status.json'), 'w') as jsfile:
@@ -275,12 +285,24 @@ def align(nthreads=4, ntranscriptionthreads=2, data_dir=get_datadir('webdata')):
                               ntranscriptionthreads=ntranscriptionthreads)
 
     uid = transcriber.next_id()
-    audio = os.environ.get('INPUT_MEDIA_URL')
+
     transcript = ''
+    audio = os.environ.get('INPUT_MEDIA_URL', '')
+
+    if 'INPUT_MEDIA_S3_BUCKET' in os.environ:
+        audio = boto3.resource('s3').Object(
+            os.environ.get('INPUT_MEDIA_S3_BUCKET'),
+            os.environ.get('INPUT_MEDIA_S3_KEY')
+        ).get()['Body'].read()
 
     if 'INPUT_TRANSCRIPT_URL' in os.environ:
         with urllib.request.urlopen(os.environ.get('INPUT_TRANSCRIPT_URL')) as t:
             transcript = t.read().decode('utf-8')
+    elif 'INPUT_TRANSCRIPT_S3_BUCKET' in os.environ:
+        transcript = boto3.resource('s3').Object(
+            os.environ.get('INPUT_TRANSCRIPT_S3_BUCKET'),
+            os.environ.get('INPUT_TRANSCRIPT_S3_KEY')
+        ).get()['Body'].read().decode('utf-8')
 
     async_mode = False
     disfluency = True  # if b'disfluency' in req.args else False
@@ -331,7 +353,7 @@ if __name__ == '__main__':
     logging.info('gentle %s' % (gentle.__version__))
     logging.info('listening at %s:%d\n' % (args.host, args.port))
 
-    if 'INPUT_MEDIA_URL' in os.environ:
+    if ('INPUT_MEDIA_URL' in os.environ) or ('INPUT_MEDIA_S3_BUCKET' in os.environ) or ('INPUT_TRANSCRIPT_S3_BUCKET' in os.environ):
         align(nthreads=args.nthreads,
               ntranscriptionthreads=args.ntranscriptionthreads)
     else:
