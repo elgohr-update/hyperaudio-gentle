@@ -13,12 +13,26 @@ jobs:
     - uses: actions/checkout@v1
     - name: Update submodules
       run: git submodule update --init --recursive
-#     - name: Build the Docker image
-#       run: docker build . --file Dockerfile --tag gentle:$(date +%s)
+    - name: Login to ECR
+      id: ecr
+      uses: elgohr/ecr-login-action@master
+      with:
+        access_key: ${{ secrets.AWS_ACCESS_KEY }}
+        secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        region: ${{ secrets.AWS_REGION }}
     - name: Publish to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
       with:
         name: hyperaudio/gentle
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-#         registry: docker.pkg.github.com
+        username: ${{ steps.ecr.outputs.username }}
+        password: ${{ steps.ecr.outputs.password }}
+        registry: ${{ steps.ecr.outputs.registry }}
+#     - name: Build the Docker image
+#       run: docker build . --file Dockerfile --tag gentle:$(date +%s)
+#     - name: Publish to Registry
+#       uses: elgohr/Publish-Docker-Github-Action@master
+#       with:
+#         name: hyperaudio/gentle
+#         username: ${{ secrets.DOCKER_USERNAME }}
+#         password: ${{ secrets.DOCKER_PASSWORD }}
+# #         registry: docker.pkg.github.com
