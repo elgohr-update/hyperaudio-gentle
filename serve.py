@@ -66,7 +66,7 @@ class Transcriber():
         outdir = os.path.join(self.data_dir, 'transcriptions', uid)
 
         tran_path = os.path.join(outdir, 'transcript.txt')
-        with open(tran_path, 'w') as tranfile:
+        with open(tran_path, 'wb') as tranfile:
             tranfile.write(transcript.encode('utf-8'))
         if not isinstance(audio, str):
             audio_path = os.path.join(outdir, 'upload')
