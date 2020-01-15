@@ -67,7 +67,7 @@ class Transcriber():
 
         tran_path = os.path.join(outdir, 'transcript.txt')
         with open(tran_path, 'w') as tranfile:
-            tranfile.write(transcript)
+            tranfile.write(transcript.encode('utf-8'))
         if not isinstance(audio, str):
             audio_path = os.path.join(outdir, 'upload')
             with open(audio_path, 'wb') as wavfile:
@@ -76,7 +76,6 @@ class Transcriber():
         status['status'] = 'ENCODING'
 
         wavfile = os.path.join(outdir, 'a.wav')
-        # if ((not isinstance(audio, str)) and gentle.resample(os.path.join(outdir, 'upload'), wavfile) != 0) or gentle.resample(audio, wavfile) != 0:
         if (not isinstance(audio, str)) and gentle.resample(os.path.join(outdir, 'upload'), wavfile) != 0:
             status['status'] = 'ERROR'
             status['error'] = "Encoding failed. Make sure that you've uploaded a valid media file."
