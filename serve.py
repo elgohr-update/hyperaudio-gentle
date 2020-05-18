@@ -127,8 +127,8 @@ class Transcriber():
         # Save
         with open(os.path.join(outdir, 'align.json'), 'w') as jsfile:
             jsfile.write(output.to_json(indent=2))
-        with open(os.path.join(outdir, 'align.csv'), 'w') as csvfile:
-            csvfile.write(output.to_csv())
+        with open(os.path.join(outdir, 'align.csv'), 'wb') as csvfile:
+            csvfile.write(output.to_csv().encode('utf-8'))
 
         # Inline the alignment into the index.html file.
         htmltxt = open(get_resource('www/view_alignment.html')).read()
@@ -319,7 +319,12 @@ def align(nthreads=4, ntranscriptionthreads=2, data_dir=get_datadir('webdata')):
         uid, transcript, audio, async_mode, **kwargs)
 
     if 'OUTPUT_S3_BUCKET' in os.environ:
-        boto3.resource('s3').Object(
+        if 'OUTPUT_S3_ENDPOINT' in os.environ:
+            s3 = boto3.resource('s3', endpoint_url=os.environ.get('OUTPUT_S3_ENDPOINT'))
+        else:
+            s3 = boto3.resource('s3')
+
+        s3.Object(
             os.environ.get('OUTPUT_S3_BUCKET'),
             os.environ.get('OUTPUT_S3_KEY',
                            '{}/align.json'.format(uid))
